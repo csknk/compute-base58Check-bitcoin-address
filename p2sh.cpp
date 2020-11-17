@@ -21,20 +21,29 @@ int main(int argc, char *argv[])
 	Bytes input;
 	hexstringToBytes(hexstring, input);
 
+	// 1: SHA256 hash the input bytes
+	// 2: RIPEMD160 the result of step 1
+	// 3. Prepend the network byte to the hash
+	// 4. Perform SHA256 twice on the concatenated (network byte || RIPEMD160 hash)
+	// The checksum is the first four bytes of the result.
+	// 5. Append the 4 byte checksum to the concatenated (network byte || RIPEMD160 hash),
+	// resulting in 25 bytes
+	// 6. Base58 encode the result
+	
 	Bytes initialSHA256(SHA256_DIGEST_LENGTH);
 	sha256(input.data(), input.size(), initialSHA256);
+	
 	Bytes ripemd160Hash(RIPEMD160_DIGEST_LENGTH);
 	ripemd160(&initialSHA256[0], initialSHA256.size(), ripemd160Hash);
 	
-	// Prepend the version byte
 	ripemd160Hash.insert(std::begin(ripemd160Hash), networkByte);
 
-	// Perform SHA256 twice  - checksum is the first four bytes of the result.
 	Bytes checksumHash(SHA256_DIGEST_LENGTH);
 	sha256(&ripemd160Hash[0], ripemd160Hash.size(), checksumHash);
 	sha256(&checksumHash[0], checksumHash.size(), checksumHash);
 	Bytes::const_iterator first = checksumHash.begin();
 	Bytes::const_iterator last = first + 4;
+	
 	ripemd160Hash.insert(ripemd160Hash.end(), first, last);
 	
 	std::string b58 = EncodeBase58(ripemd160Hash); 
